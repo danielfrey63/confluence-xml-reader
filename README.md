@@ -29,25 +29,32 @@ Ein moderner Webbrowser mit XSLT-Unterstützung:
 
 1. **Repository klonen**:
    ```bash
-   git clone https://github.com/IHR-USERNAME/confluence-xml-reader.git
+   git clone https://github.com/danielfrey63/confluence-xml-reader.git
    cd confluence-xml-reader
    ```
 
-2. **Dateien bereitstellen**:
-   - Öffnen Sie `index.html` direkt im Browser, oder
-   - Verwenden Sie einen lokalen Webserver
+2. **Lokalen Webserver starten**:
 
-### Lokaler Webserver (optional)
+   ⚠️ **WICHTIG**: Die Anwendung muss über einen Webserver ausgeführt werden, da Browser aus Sicherheitsgründen CORS-Requests von `file://` URLs blockieren!
 
-Mit Python:
-```bash
-python -m http.server 8000
-```
+   **Option 1 - Python** (empfohlen):
+   ```bash
+   # Python 3
+   python -m http.server 3000
+   
+   # Dann öffnen: http://localhost:3000
+   ```
 
-Mit Node.js (http-server):
-```bash
-npx http-server -p 8000
-```
+   **Option 2 - Node.js**:
+   ```bash
+   npx http-server -p 3000
+   
+   # Dann öffnen: http://localhost:3000
+   ```
+
+   **Option 3 - VS Code**:
+   - Installieren Sie die Extension "Live Server"
+   - Rechtsklick auf `index.html` → "Open with Live Server"
 
 Dann öffnen Sie `http://localhost:8000` im Browser.
 
