@@ -1,8 +1,8 @@
-# 📄 Confluence XML Reader
+# Confluence XML Reader
 
 Ein einfacher, browserbasierter XSLT-XML-Reader zur Transformation von Confluence-XML-Exporten in ein lesbares HTML-Format.
 
-## 🚀 Features
+## Features
 
 - **Browser-basiert**: Keine Installation erforderlich - läuft direkt im Browser
 - **XSLT-Transformation**: Verwendet XSLT 1.0 für die XML-zu-HTML-Konvertierung
@@ -18,52 +18,37 @@ Ein einfacher, browserbasierter XSLT-XML-Reader zur Transformation von Confluenc
   - Links und Bilder
   - Panels und strukturierte Inhalte
 
-## 📋 Voraussetzungen
+## Voraussetzungen
 
 Ein moderner Webbrowser mit XSLT-Unterstützung:
+
 - Chrome/Edge (empfohlen)
 - Firefox
 - Safari
 
-## 🔧 Installation
+## Installation
 
 1. **Repository klonen**:
+
    ```bash
    git clone https://github.com/danielfrey63/confluence-xml-reader.git
    cd confluence-xml-reader
    ```
-
 2. **Lokalen Webserver starten**:
 
-   ⚠️ **WICHTIG**: Die Anwendung muss über einen Webserver ausgeführt werden, da Browser aus Sicherheitsgründen CORS-Requests von `file://` URLs blockieren!
+   Die Anwendung muss über einen Webserver ausgeführt werden, da Browser aus Sicherheitsgründen CORS-Requests von `file://` URLs blockieren! Einfache Lösung:
 
-   **Option 1 - Python** (empfohlen):
-   ```bash
-   # Python 3
-   python -m http.server 3000
-   
-   # Dann öffnen: http://localhost:3000
-   ```
-
-   **Option 2 - Node.js**:
    ```bash
    npx http-server -p 3000
-   
+
    # Dann öffnen: http://localhost:3000
    ```
 
-   **Option 3 - VS Code**:
-   - Installieren Sie die Extension "Live Server"
-   - Rechtsklick auf `index.html` → "Open with Live Server"
+## Verwendung
 
-Dann öffnen Sie `http://localhost:8000` im Browser.
-
-## 📖 Verwendung
-
-1. **Öffnen Sie** `index.html` in Ihrem Browser
-2. **Klicken Sie** auf "XML-Datei auswählen" oder ziehen Sie eine XML-Datei in den Upload-Bereich
-3. **Klicken Sie** auf "Transformieren", um die XML-Datei in HTML zu konvertieren
-4. **Betrachten Sie** das transformierte Ergebnis im unteren Bereich
+1. **Klicken Sie** auf "XML-Datei auswählen" oder ziehen Sie eine XML-Datei in den Upload-Bereich
+2. **Klicken Sie** auf "Transformieren", um die XML-Datei in HTML zu konvertieren
+3. **Betrachten Sie** das transformierte Ergebnis im unteren Bereich
 
 ### XML-Export aus Confluence
 
@@ -75,7 +60,7 @@ So erhalten Sie eine XML-Datei aus Confluence:
 4. Speichern Sie die heruntergeladene XML-Datei
 5. Laden Sie die Datei in den XML Reader
 
-## 📁 Projektstruktur
+## Projektstruktur
 
 ```
 confluence-xml-reader/
@@ -86,7 +71,7 @@ confluence-xml-reader/
 └── README.md                   # Diese Datei
 ```
 
-## 🎨 Anpassung
+## Anpassung
 
 ### XSLT-Transformation erweitern
 
@@ -112,36 +97,36 @@ Das Styling kann in `styles.css` angepasst werden. Nutzen Sie die CSS-Variablen 
 }
 ```
 
-## 🛠️ Unterstützte Confluence-Elemente
+## Unterstützte Confluence-Elemente
 
-| Element | Status | Beschreibung |
-|---------|--------|--------------|
-| Überschriften | ✅ | h1-h6 vollständig unterstützt |
-| Absätze | ✅ | Standard-Textabsätze |
-| Listen | ✅ | Geordnete und ungeordnete Listen |
-| Tabellen | ✅ | Mit Header und Body |
-| Textformatierung | ✅ | Fett, Kursiv, Unterstrichen, Durchgestrichen |
-| Code-Inline | ✅ | `code` Elemente |
-| Code-Blöcke | ✅ | Mit Sprach-Indikator |
-| Links | ✅ | Externe und interne Links |
-| Bilder | ⚠️ | Struktur vorhanden, Pfade müssen angepasst werden |
-| Makros | ✅ | Info, Warning, Note, Tip |
-| Panels | ✅ | Farbcodierte Panel-Darstellung |
+| Element          | Status | Beschreibung                                       |
+| ---------------- | ------ | -------------------------------------------------- |
+| Überschriften   | ✅     | h1-h6 vollständig unterstützt                    |
+| Absätze         | ✅     | Standard-Textabsätze                              |
+| Listen           | ✅     | Geordnete und ungeordnete Listen                   |
+| Tabellen         | ✅     | Mit Header und Body                                |
+| Textformatierung | ✅     | Fett, Kursiv, Unterstrichen, Durchgestrichen       |
+| Code-Inline      | ✅     | `code` Elemente                                  |
+| Code-Blöcke     | ✅     | Mit Sprach-Indikator                               |
+| Links            | ✅     | Externe und interne Links                          |
+| Bilder           | ⚠️   | Struktur vorhanden, Pfade müssen angepasst werden |
+| Makros           | ✅     | Info, Warning, Note, Tip                           |
+| Panels           | ✅     | Farbcodierte Panel-Darstellung                     |
 
-## ⚠️ Bekannte Einschränkungen
+## Bekannte Einschränkungen
 
 - **Bilder**: Attachment-Pfade werden nicht automatisch aufgelöst
 - **Externe Links**: Confluence-interne Links zeigen nur den Titel an
 - **XSLT 1.0**: Limitierungen durch XSLT 1.0 im Browser
 - **Große Dateien**: Sehr große XML-Dateien können die Browser-Performance beeinträchtigen
 
-## 🔒 Datenschutz & Sicherheit
+## Datenschutz & Sicherheit
 
 - **Keine Server-Kommunikation**: Alle Verarbeitungen erfolgen lokal im Browser
 - **Keine Datenspeicherung**: XML-Dateien werden nicht gespeichert oder übertragen
 - **Client-seitig**: 100% client-seitige Verarbeitung
 
-## 🤝 Beiträge
+## Beiträge
 
 Beiträge sind willkommen! So können Sie helfen:
 
@@ -151,16 +136,16 @@ Beiträge sind willkommen! So können Sie helfen:
 4. Pushen Sie zum Branch (`git push origin feature/AmazingFeature`)
 5. Öffnen Sie einen Pull Request
 
-## 📝 Lizenz
+## Lizenz
 
 Dieses Projekt steht unter der MIT-Lizenz. Siehe [LICENSE](LICENSE) für Details.
 
-## 🙏 Danksagungen
+## Danksagungen
 
 - Atlassian Confluence für die XML-Export-Funktion
 - W3C für XSLT-Standards
 
-## 📞 Kontakt
+## Kontakt
 
 Bei Fragen oder Problemen öffnen Sie bitte ein Issue im Repository.
 
