@@ -1,0 +1,28 @@
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test files
+test/
+*.test.xml
+sample*.xml
+
+# Logs
+*.log
+
+# Temp files
+*.tmp
+*.temp
+
+# User data (Confluence exports)
+pages/
+*.xml
+!example.xml

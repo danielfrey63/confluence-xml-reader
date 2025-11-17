@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ac:confluence-content xmlns:ac="http://www.atlassian.com/schema/confluence/4/ac/" xmlns:ri="http://www.atlassian.com/schema/confluence/4/ri/">
+    <ac:rich-text-body>
+        <h1>Willkommen zur Confluence XML Reader Demo</h1>
+        
+        <p>Dies ist eine Beispiel-Seite, die verschiedene Confluence-Elemente demonstriert.</p>
+        
+        <h2>Textformatierung</h2>
+        <p>Dieser Absatz enthält <strong>fetten Text</strong>, <em>kursiven Text</em>, <u>unterstrichenen Text</u> und <s>durchgestrichenen Text</s>.</p>
+        
+        <p>Hier ist etwas <code>inline Code</code> im Text.</p>
+        
+        <h2>Listen</h2>
+        
+        <h3>Ungeordnete Liste</h3>
+        <ul>
+            <li>Erster Punkt</li>
+            <li>Zweiter Punkt mit <strong>Formatierung</strong></li>
+            <li>Dritter Punkt</li>
+        </ul>
+        
+        <h3>Geordnete Liste</h3>
+        <ol>
+            <li>Schritt 1: Installation</li>
+            <li>Schritt 2: Konfiguration</li>
+            <li>Schritt 3: Ausführung</li>
+        </ol>
+        
+        <h2>Code-Beispiel</h2>
+        
+        <ac:structured-macro ac:name="code">
+            <ac:parameter ac:name="language">javascript</ac:parameter>
+            <ac:plain-text-body><![CDATA[function helloWorld() {
+    console.log("Hello, Confluence!");
+    return true;
+}
+
+// Aufruf der Funktion
+helloWorld();]]></ac:plain-text-body>
+        </ac:structured-macro>
+        
+        <h2>Tabelle</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Status</th>
+                    <th>Priorität</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>XSLT-Transformation</td>
+                    <td>Implementiert</td>
+                    <td>Hoch</td>
+                </tr>
+                <tr>
+                    <td>Modernes UI</td>
+                    <td>Implementiert</td>
+                    <td>Hoch</td>
+                </tr>
+                <tr>
+                    <td>Bilder-Support</td>
+                    <td>In Arbeit</td>
+                    <td>Mittel</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h2>Panels und Makros</h2>
+        
+        <ac:structured-macro ac:name="info">
+            <ac:rich-text-body>
+                <p>Dies ist eine <strong>Info-Box</strong>. Sie eignet sich für wichtige Hinweise.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        
+        <ac:structured-macro ac:name="warning">
+            <ac:rich-text-body>
+                <p>Dies ist eine <strong>Warnungs-Box</strong>. Vorsicht ist geboten!</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        
+        <ac:structured-macro ac:name="tip">
+            <ac:rich-text-body>
+                <p>Dies ist eine <strong>Tipp-Box</strong>. Hier sind nützliche Hinweise zu finden.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        
+        <ac:structured-macro ac:name="note">
+            <ac:rich-text-body>
+                <p>Dies ist eine <strong>Notiz-Box</strong> für zusätzliche Informationen.</p>
+            </ac:rich-text-body>
+        </ac:structured-macro>
+        
+        <h2>Links</h2>
+        
+        <p>Hier ist ein <a href="https://www.atlassian.com/software/confluence">externer Link zu Confluence</a>.</p>
+        
+        <p>Und hier ist ein interner Link: <ac:link><ri:page ri:content-title="Andere Seite"/></ac:link></p>
+        
+        <h2>Weiteres Beispiel-Makro</h2>
+        
+        <ac:structured-macro ac:name="toc">
+            <ac:parameter ac:name="maxLevel">3</ac:parameter>
+            <ac:parameter ac:name="minLevel">1</ac:parameter>
+        </ac:structured-macro>
+        
+        <h2>Zusammenfassung</h2>
+        
+        <p>Dieser XML Reader unterstützt die wichtigsten Confluence-Elemente und verwandelt sie in ein schön formatiertes, lesbares HTML-Dokument.</p>
+        
+        <p><strong>Viel Erfolg beim Verwenden des Tools!</strong></p>
+        
+    </ac:rich-text-body>
+</ac:confluence-content>

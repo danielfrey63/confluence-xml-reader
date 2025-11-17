@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confluence XML Reader</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <h1 class="toolbar-title">📄 Confluence XML Reader</h1>
+            <span id="pageTitle" class="page-title"></span>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Seiten</h3>
+                <div class="sidebar-actions">
+                    <button id="openDirBtn" class="icon-btn-small" title="Verzeichnis öffnen">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </button>
+                    <button id="toggleSidebarBtn" class="icon-btn-small" title="Seitenleiste einklappen">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="resize-handle" id="resizeHandle"></div>
+            <input type="file" id="xmlFile" accept=".xml" webkitdirectory directory multiple style="display: none;" />
+            <div class="file-list" id="fileList">
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <p>Kein Verzeichnis geöffnet</p>
+                    <p class="hint">Klicken Sie auf das Ordner-Symbol</p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <div id="error" class="error-message"></div>
+            <div id="output" class="output">
+                <div class="welcome-message">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <h2>Confluence XML Reader</h2>
+                    <p>Öffnen Sie ein Verzeichnis mit XML-Dateien, um zu beginnen</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let xsltContent = null;
+        let fileMap = new Map(); // Store all loaded files
+        let attachmentMap = new Map(); // Store all attachment files
+        let pageTree = null; // Store page hierarchy
+        let baseDirectory = ''; // Store base directory path
+
+        const xmlFileInput = document.getElementById('xmlFile');
+        const openDirBtn = document.getElementById('openDirBtn');
+        const pageTitle = document.getElementById('pageTitle');
+        const output = document.getElementById('output');
+        const errorDiv = document.getElementById('error');
+        const fileList = document.getElementById('fileList');
+        const sidebar = document.getElementById('sidebar');
+        const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+        const mainLayout = document.querySelector('.main-layout');
+
+        // Load XSLT on page load
+        async function loadXSLT() {
+            try {
+                console.log('Loading XSLT file...');
+                const response = await fetch('confluence-transform.xslt');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+                console.log('XSLT text loaded, length:', text.length);
+                const parser = new DOMParser();
+                xsltContent = parser.parseFromString(text, 'text/xml');
+                
+                // Check for parsing errors
+                const parserError = xsltContent.querySelector('parsererror');
+                if (parserError) {
+                    console.error('XSLT parsing error:', parserError.textContent);
+                    throw new Error('XSLT-Parsing-Fehler');
+                }
+                
+                console.log('XSLT loaded and parsed successfully');
+            } catch (error) {
+                console.error('Error loading XSLT:', error);
+                showError('Fehler beim Laden der XSLT-Datei: ' + error.message);
+            }
+        }
+
+        console.log('Starting XSLT load...');
+        loadXSLT();
+        
+        // Resizable sidebar
+        const resizeHandle = document.getElementById('resizeHandle');
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        resizeHandle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = sidebar.offsetWidth;
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            
+            const delta = e.clientX - startX;
+            const newWidth = Math.max(200, Math.min(600, startWidth + delta));
+            sidebar.style.width = newWidth + 'px';
+        });
+        
+        document.addEventListener('mouseup', function() {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+        
+        // Toggle sidebar collapse/expand
+        let sidebarCollapsed = false;
+        toggleSidebarBtn.addEventListener('click', function() {
+            sidebarCollapsed = !sidebarCollapsed;
+            sidebar.classList.toggle('collapsed', sidebarCollapsed);
+            
+            // Update button icon and title
+            const svg = toggleSidebarBtn.querySelector('svg polyline');
+            if (sidebarCollapsed) {
+                svg.setAttribute('points', '9 18 15 12 9 6'); // Right arrow
+                toggleSidebarBtn.setAttribute('title', 'Seitenleiste ausklappen');
+            } else {
+                svg.setAttribute('points', '15 18 9 12 15 6'); // Left arrow
+                toggleSidebarBtn.setAttribute('title', 'Seitenleiste einklappen');
+            }
+        });
+
+        // Extract clean title from filename (remove ID prefix)
+        function extractTitle(filename) {
+            // Remove .xml extension
+            let name = filename.replace(/\.xml$/i, '');
+            // Remove ID prefix (e.g., "3175384967_" or similar)
+            name = name.replace(/^\d+_/, '');
+            // Replace underscores and commas with spaces
+            name = name.replace(/_/g, ' ').replace(/,/g, ',');
+            return name;
+        }
+
+        // Open directory button handler
+        openDirBtn.addEventListener('click', function() {
+            xmlFileInput.click();
+        });
+
+        // Handle directory selection
+        xmlFileInput.addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            
+            if (files.length === 0) {
+                showError('Keine Dateien im ausgewählten Verzeichnis gefunden');
+                return;
+            }
+
+            // Store base directory from first file
+            if (files[0].webkitRelativePath) {
+                const parts = files[0].webkitRelativePath.split('/');
+                baseDirectory = parts[0];
+            }
+
+            console.log(`Found ${files.length} files`);
+            fileMap.clear();
+            
+            // Find and load tree.json
+            const treeFile = files.find(f => f.name === 'tree.json');
+            if (treeFile) {
+                try {
+                    const treeText = await treeFile.text();
+                    pageTree = JSON.parse(treeText);
+                    console.log('Page tree loaded:', pageTree);
+                } catch (error) {
+                    console.error('Error loading tree.json:', error);
+                }
+            }
+            
+            // Store all files in map
+            files.forEach(file => {
+                if (file.name.endsWith('.xml')) {
+                    fileMap.set(file.name, file);
+                } else if (file.name !== 'tree.json') {
+                    // Store attachment files (images, PDFs, etc.)
+                    const relativePath = file.webkitRelativePath || file.name;
+                    attachmentMap.set(relativePath, file);
+                }
+            });
+            
+            console.log('=== Attachment Summary ===');
+            console.log(`Total attachments loaded: ${attachmentMap.size}`);
+            if (attachmentMap.size > 0) {
+                console.log('Sample attachments:');
+                let count = 0;
+                for (const [path, file] of attachmentMap.entries()) {
+                    console.log(`  - ${file.name} (${path})`);
+                    if (++count >= 5) break;
+                }
+            }
+            
+            // Build hierarchical tree view
+            if (pageTree) {
+                buildTreeView(pageTree);
+                // Auto-load root page
+                const rootFilename = pageTree.filepath.split('\\').pop();
+                const rootFile = Array.from(fileMap.values()).find(f => f.name === rootFilename);
+                if (rootFile) {
+                    setTimeout(() => {
+                        document.querySelector('.tree-item')?.classList.add('active');
+                        loadAndDisplayFile(rootFile, pageTree.title);
+                    }, 100);
+                }
+            } else {
+                // Fallback to flat list
+                buildFlatList(Array.from(fileMap.values()));
+            }
+        });
+        
+        // Build hierarchical tree view from tree.json
+        function buildTreeView(node, parentElement = null, level = 0) {
+            const container = parentElement || fileList;
+            
+            if (level === 0) {
+                container.innerHTML = '';
+            }
+            
+            const item = document.createElement('div');
+            item.className = 'tree-item';
+            item.style.paddingLeft = `${level * 16 + 8}px`;
+            item.dataset.id = node.id;
+            
+            const hasChildren = node.children && node.children.length > 0;
+            
+            item.innerHTML = `
+                <div class="tree-item-content">
+                    ${hasChildren ? '<span class="tree-toggle">▶</span>' : '<span class="tree-spacer"></span>'}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span class="tree-item-label">${node.title}</span>
+                </div>
+            `;
+            
+            const content = item.querySelector('.tree-item-content');
+            const toggle = item.querySelector('.tree-toggle');
+            
+            // Click handler for page
+            content.addEventListener('click', async (e) => {
+                // Don't trigger if clicking toggle
+                if (e.target === toggle) return;
+                
+                // Find and load the file
+                const filename = node.filepath.split('\\').pop();
+                const file = Array.from(fileMap.values()).find(f => f.name === filename);
+                
+                if (file) {
+                    // Remove active class from all items
+                    document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    await loadAndDisplayFile(file, node.title);
+                }
+            });
+            
+            container.appendChild(item);
+            
+            // Add children container
+            if (hasChildren) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'tree-children';
+                childrenContainer.style.display = 'none';
+                
+                // Toggle handler
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isExpanded = childrenContainer.style.display !== 'none';
+                    childrenContainer.style.display = isExpanded ? 'none' : 'block';
+                    toggle.textContent = isExpanded ? '▶' : '▼';
+                    item.classList.toggle('expanded', !isExpanded);
+                });
+                
+                container.appendChild(childrenContainer);
+                
+                // Recursively build children
+                node.children.forEach(child => {
+                    buildTreeView(child, childrenContainer, level + 1);
+                });
+            }
+        }
+        
+        // Fallback flat list if no tree.json
+        function buildFlatList(files) {
+            fileList.innerHTML = '';
+            files.sort((a, b) => a.name.localeCompare(b.name));
+            
+            files.forEach(file => {
+                const title = extractTitle(file.name);
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span class="file-name">${title}</span>
+                `;
+                
+                fileItem.addEventListener('click', () => loadAndDisplayFile(file, title));
+                fileList.appendChild(fileItem);
+            });
+            
+            // Auto-load first file
+            if (files.length > 0) {
+                loadAndDisplayFile(files[0], extractTitle(files[0].name));
+            }
+        }
+
+        // Load and display a single file
+        async function loadAndDisplayFile(file, title, clickedElement = null) {
+            try {
+                console.log('Loading file:', file.name);
+                
+                // Active state is handled by the tree-item click handler
+                
+                // Read file content
+                const text = await file.text();
+                let xmlText = text.trim();
+                
+                // Remove XML declaration if present
+                const xmlDeclaration = xmlText.match(/^<\?xml[^>]*\?>\s*/);
+                let contentOnly = xmlText;
+                if (xmlDeclaration) {
+                    contentOnly = xmlText.substring(xmlDeclaration[0].length);
+                }
+                
+                // Try to parse as-is first (for debugging)
+                let needsWrapping = false;
+                const testParser = new DOMParser();
+                const testDoc = testParser.parseFromString('<?xml version="1.0" encoding="UTF-8"?>\n' + contentOnly, 'text/xml');
+                const testError = testDoc.querySelector('parsererror');
+                
+                if (testError) {
+                    // If parsing fails, we definitely need wrapping
+                    needsWrapping = true;
+                    console.log('XML needs wrapping due to parsing error');
+                } else {
+                    // Check if there's only one child element in the document element
+                    const rootChildren = Array.from(testDoc.documentElement.childNodes).filter(
+                        node => node.nodeType === 1 // Only element nodes
+                    );
+                    if (rootChildren.length !== 1) {
+                        needsWrapping = true;
+                        console.log('XML needs wrapping due to multiple root elements:', rootChildren.length);
+                    }
+                }
+                
+                // Always wrap if needed or if Confluence namespaces are present
+                if (needsWrapping || contentOnly.includes('ac:') || contentOnly.includes('ri:')) {
+                    xmlText = '<?xml version="1.0" encoding="UTF-8"?>\n<confluence-content xmlns:ac="http://www.atlassian.com/schema/confluence/4/ac/" xmlns:ri="http://www.atlassian.com/schema/confluence/4/ri/">\n' + contentOnly + '\n</confluence-content>';
+                } else {
+                    // For proper XML with single root, ensure there's a declaration
+                    if (!xmlDeclaration) {
+                        xmlText = '<?xml version="1.0" encoding="UTF-8"?>\n' + xmlText;
+                    }
+                }
+                
+                // Parse XML (final parse)
+                const parser = new DOMParser();
+                const xmlContent = parser.parseFromString(xmlText, 'text/xml');
+                
+                // Check for parsing errors
+                const parserError = xmlContent.querySelector('parsererror');
+                if (parserError) {
+                    console.error('Final XML parsing failed. XML content:', xmlText.substring(0, 500));
+                    throw new Error('XML-Parsing-Fehler: ' + parserError.textContent);
+                }
+                
+                // Update title
+                pageTitle.textContent = title;
+                
+                // Transform and display
+                if (!xsltContent) {
+                    throw new Error('XSLT noch nicht geladen');
+                }
+                
+                const xsltProcessor = new XSLTProcessor();
+                xsltProcessor.importStylesheet(xsltContent);
+                const resultDocument = xsltProcessor.transformToFragment(xmlContent, document);
+                
+                output.innerHTML = '';
+                
+                // Add page title as H1
+                const titleHeading = document.createElement('h1');
+                titleHeading.className = 'page-heading';
+                titleHeading.textContent = title;
+                output.appendChild(titleHeading);
+                
+                output.appendChild(resultDocument);
+                
+                // Load attachments after transformation
+                await loadAttachments();
+                
+                clearError();
+                
+                console.log('File loaded and transformed successfully');
+            } catch (error) {
+                console.error('Error loading file:', error);
+                showError('Fehler beim Laden der Datei: ' + error.message);
+            }
+        }
+
+        // Load attachments and replace placeholders with blob URLs
+        async function loadAttachments() {
+            const attachmentImages = output.querySelectorAll('img[data-filename]');
+            console.log(`\n=== Loading Attachments ===`);
+            console.log(`Found ${attachmentImages.length} attachment images to load`);
+            
+            let loaded = 0;
+            let failed = 0;
+            let empty = 0;
+            let notFound = 0;
+            
+            for (const img of attachmentImages) {
+                const filename = img.getAttribute('data-filename');
+                
+                // Skip if no filename
+                if (!filename || filename.trim() === '') {
+                    console.warn('Skipping attachment with empty filename');
+                    img.alt = '[Kein Dateiname angegeben]';
+                    continue;
+                }
+                
+                console.log('Looking for attachment:', filename);
+                
+                // Try to find the attachment file
+                // The filename might be in format: "pageId_pageName/attachmentName"
+                let attachmentFile = null;
+                
+                // Extract just the filename from the path
+                const filenameOnly = filename.split('/').pop().split('\\').pop();
+                console.log('  Looking for filename:', filenameOnly);
+                console.log('  Full path from XML:', filename);
+                
+                // Try different matching strategies
+                for (const [path, file] of attachmentMap.entries()) {
+                    // Strategy 1: Exact filename match (most reliable)
+                    if (file.name === filenameOnly) {
+                        attachmentFile = file;
+                        console.log('  ✓ Found via exact filename match:', path);
+                        break;
+                    }
+                    
+                    // Strategy 2: Path ends with the full filename from XML
+                    if (path.endsWith(filename.replace(/\\/g, '/'))) {
+                        attachmentFile = file;
+                        console.log('  ✓ Found via full path match:', path);
+                        break;
+                    }
+                    
+                    // Strategy 3: Path contains the filename
+                    if (path.includes(filenameOnly)) {
+                        attachmentFile = file;
+                        console.log('  ✓ Found via partial match:', path);
+                        break;
+                    }
+                }
+                
+                if (attachmentFile) {
+                    try {
+                        const fileExtension = attachmentFile.name.split('.').pop().toLowerCase();
+                        console.log('  → File type:', attachmentFile.type, 'Extension:', fileExtension, 'Size:', attachmentFile.size);
+                        
+                        // Check if file is empty
+                        if (attachmentFile.size === 0) {
+                            console.warn('  ⚠ File is empty (0 bytes)');
+                            img.alt = `[Datei ist leer: ${attachmentFile.name}]`;
+                            img.style.display = 'inline-block';
+                            img.style.padding = '8px 12px';
+                            img.style.background = '#FFF4E6';
+                            img.style.border = '1px solid #FFB020';
+                            img.style.borderRadius = '4px';
+                            img.style.color = '#8B5A00';
+                            empty++;
+                            continue;
+                        }
+                        
+                        // Read file as ArrayBuffer
+                        const arrayBuffer = await attachmentFile.arrayBuffer();
+                        console.log('  → ArrayBuffer size:', arrayBuffer.byteLength);
+                        
+                        // Check first bytes to verify file type
+                        const bytes = new Uint8Array(arrayBuffer, 0, Math.min(8, arrayBuffer.byteLength));
+                        const header = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                        console.log('  → File header (hex):', header);
+                        
+                        // Check if it's a PDF
+                        if (fileExtension === 'pdf') {
+                            // Replace img with a link for PDFs
+                            const blobObj = new Blob([arrayBuffer], { type: 'application/pdf' });
+                            const blobUrl = URL.createObjectURL(blobObj);
+                            
+                            const link = document.createElement('a');
+                            link.href = blobUrl;
+                            link.target = '_blank';
+                            link.className = 'attachment-link pdf-attachment';
+                            link.innerHTML = `
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <span>${attachmentFile.name}</span>
+                            `;
+                            img.parentNode.replaceChild(link, img);
+                            console.log('Loaded PDF attachment:', filename);
+                        } else {
+                            // Handle as image - detect MIME type from file header
+                            let mimeType = 'image/png';
+                            
+                            // Detect actual file type from header bytes
+                            if (header.startsWith('ff d8 ff')) {
+                                mimeType = 'image/jpeg';
+                                console.log('  → Detected JPEG from header');
+                            } else if (header.startsWith('89 50 4e 47')) {
+                                mimeType = 'image/png';
+                                console.log('  → Detected PNG from header');
+                            } else if (header.startsWith('47 49 46 38')) {
+                                mimeType = 'image/gif';
+                                console.log('  → Detected GIF from header');
+                            } else if (header.startsWith('3c 73 76 67') || header.startsWith('3c 3f 78 6d')) {
+                                mimeType = 'image/svg+xml';
+                                console.log('  → Detected SVG from header');
+                            } else {
+                                // Fallback to extension-based detection
+                                if (['jpg', 'jpeg'].includes(fileExtension)) mimeType = 'image/jpeg';
+                                else if (fileExtension === 'gif') mimeType = 'image/gif';
+                                else if (fileExtension === 'svg') mimeType = 'image/svg+xml';
+                                else if (fileExtension === 'webp') mimeType = 'image/webp';
+                                console.log('  → Using MIME type from extension:', mimeType);
+                            }
+                            
+                            const blobObj = new Blob([arrayBuffer], { type: mimeType });
+                            const blobUrl = URL.createObjectURL(blobObj);
+                            console.log('  → Created Blob with MIME type:', mimeType);
+                            
+                            // Set up error and load handlers before setting src
+                            img.onerror = (e) => {
+                                console.error('  ✗ Image failed to load:', filename, e);
+                                img.alt = `[Bild konnte nicht geladen werden: ${attachmentFile.name}]`;
+                                failed++;
+                            };
+                            
+                            img.onload = () => {
+                                console.log('  ✓ Image loaded successfully:', filename);
+                                loaded++;
+                            };
+                            
+                            img.src = blobUrl;
+                            img.style.maxWidth = '100%';
+                            img.style.height = 'auto';
+                            img.style.display = 'block';
+                            img.style.margin = '16px auto';
+                            img.removeAttribute('alt'); // Remove the placeholder alt text
+                            
+                            console.log('  → Blob URL created:', blobUrl.substring(0, 50) + '...');
+                            console.log('  → Image src set to:', img.src.substring(0, 50) + '...');
+                            console.log('Loaded image attachment:', filename);
+                        }
+                    } catch (error) {
+                        console.error('Error loading attachment:', filename, error);
+                        img.alt = `[Attachment konnte nicht geladen werden: ${filename}]`;
+                    }
+                } else {
+                    console.warn('Attachment not found:', filename);
+                    img.alt = `[Attachment nicht gefunden: ${filename}]`;
+                    notFound++;
+                }
+            }
+            
+            // Print summary
+            console.log(`\n=== Attachment Summary ===`);
+            console.log(`Total: ${attachmentImages.length} | Loaded: ${loaded} | Failed: ${failed} | Empty: ${empty} | Not Found: ${notFound}`);
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function clearError() {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
