@@ -26,3 +26,7 @@ sample*.xml
 pages/
 *.xml
 !example.xml
+
+
+.windsurf/rules/kluster-code-verify.md
+.kluster
