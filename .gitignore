@@ -30,3 +30,7 @@ pages/
 
 .windsurf/rules/kluster-code-verify.md
 .kluster
+
+# Claude Code: runtime artefacts (the config itself is tracked)
+.claude/hook-log.txt
+.claude/settings.local.json
